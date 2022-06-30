@@ -63,7 +63,7 @@ function handleSuccess(response) {
     'beforeend',
     createMarkUp(response.data.hits)
   );
-  lightbox = new SimpleLightbox('.gallery a');
+  lightbox = new SimpleLightbox('.photo-card a');
 
   obs.observe(refs.target);
 }
