@@ -1,81 +1,94 @@
 import './css/styles.css';
-import Notiflix from 'notiflix';
-import debounce from 'lodash.debounce';
-import { fetchCountries } from './fetchCountries';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
 
-const DEBOUNCE_DELAY = 300;
+import { PixabayAPI } from './API/pixabay-api';
+import { createMarkUp } from './JS/create-markup';
+import { NotifyMess } from './JS/notifymesseg';
 
-const input = document.querySelector('#search-box');
-const countryList = document.querySelector('.country-list');
-const countryInfo = document.querySelector('.country-info');
+//--------------------------
 
-input.addEventListener('input', debounce(searchCountry, DEBOUNCE_DELAY));
+const refs = {
+  form: document.querySelector('.search-form'),
+  gallery: document.querySelector('.gallery'),
+  target: document.querySelector('.target'),
+};
 
-function searchCountry(event) {
-  const countriName = event.target.value.trim();
+refs.form.addEventListener('submit', searchImages);
 
-  countryList.innerHTML = '';
-  countryInfo.innerHTML = '';
+const pixabayAPI = new PixabayAPI();
+const notifyMess = new NotifyMess();
 
-  if (countriName !== '') {
-    fetchCountries(countriName)
-      .then(createMarkUp)
-      .catch(() =>
-        Notiflix.Notify.failure('Oops, there is no country with that name')
-      );
+const obs = new IntersectionObserver(onObs, {
+  rootMargin: '200px',
+});
+
+let totalHits = 0;
+
+//----------------------------------
+
+function searchImages(event) {
+  event.preventDefault();
+
+  const { searchQuery } = event.currentTarget.elements;
+  const keyword = searchQuery.value.trim();
+
+  if (keyword === '') {
+    return notifyMess.notifyEmtyInput();
+  } else if (pixabayAPI.keyword === keyword) {
+    return notifyMess.notifyInfo();
   }
+
+  refs.gallery.innerHTML = '';
+
+  totalHits = 0;
+  pixabayAPI.page = 1;
+  pixabayAPI.keyword = keyword;
+
+  pixabayAPI.getIMGs().then(handleSuccess).catch(handleError);
 }
 
-function createMarkUp(arr) {
-  if (arr.length > 10) {
-    Notiflix.Notify.info(
-      'Too many matches found. Please enter a more specific name.'
-    );
-  } else if (arr.length < 2) {
-    countryInfo.innerHTML = createCountryCard(arr);
-  } else {
-    countryList.innerHTML = createCountryList(arr);
+//----------------------------------
+
+function handleSuccess(response) {
+  totalHits = response.data.totalHits;
+
+  if (!totalHits) {
+    return notifyMess.notifyNotFound();
+  } else if (pixabayAPI.page === 1) {
+    notifyMess.notifySuccess(totalHits);
   }
+
+  refs.gallery.insertAdjacentHTML(
+    'beforeend',
+    createMarkUp(response.data.hits)
+  );
+  lightbox = new SimpleLightbox('.gallery a');
+
+  obs.observe(refs.target);
 }
 
-function createCountryList(countries) {
-  return countries
-    .map(item => {
-      return `
-    <li class='country-item'>
-        <img class = 'item-flag'
-          src = ${item.flags.png}
-          alt = ${item.name}
-          width = '60px'>
-        <p class = 'item-name'>${item.name}</p>
-    </li>
-    `;
-    })
-    .join('');
+//----------------------------------
+
+function handleError(error) {
+  console.log(error);
+  notifyMess.notifyFail();
 }
 
-function createCountryCard(country) {
-  return `
-  <h2>
-    <img class = ''
-      src = ${country[0].flags.png}
-      alt = ${country[0].name}
-      width = '40px'>
-    ${country[0].name}
-  </h2>
-  <p>
-    Capital:
-    <span>${country[0].name}</span>
-  </p>
-  <p>
-    Population:
-    <span>${country[0].population}</span>
-  </p>
-  <p>
-    Languages:
-    <span>
-      ${country[0].languages.map(item => item.name).join(', ')}
-    </span>
-  </p>
-  `;
+//----------------------------------
+
+function onObs(entries) {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      pixabayAPI.page += 1;
+
+      if (pixabayAPI.page * 40 > totalHits) {
+        obs.unobserve(refs.target);
+        return notifyMess.motifyEnd();
+      }
+
+      pixabayAPI.getIMGs().then(handleSuccess).catch(handleError);
+      lightbox.refresh();
+    }
+  });
 }
