@@ -24,6 +24,7 @@ const obs = new IntersectionObserver(onObs, {
 });
 
 let totalHits = 0;
+let lightbox;
 
 //----------------------------------
 
