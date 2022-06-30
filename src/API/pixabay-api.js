@@ -1,8 +1,6 @@
 import axios from 'axios';
 
 export class PixabayAPI {
-  static #API_KEY = '20810720-72356cc2d71a79f29ee419399';
-  BASE_URL = 'https://pixabay.com/api/';
   // static #API_KEY = '20810720-72356cc2d71a79f29ee419399';
   // static #BASE_URL = 'https://pixabay.com/api/';
 
@@ -18,7 +16,8 @@ export class PixabayAPI {
       url: 'https://pixabay.com/api/',
       // url: PixabayAPI.#BASE_URL,
       params: {
-        key: PixabayAPI.#API_KEY,
+        key: '20810720-72356cc2d71a79f29ee419399',
+        // key: PixabayAPI.#API_KEY,
         image_type: 'photo',
         orientation: 'horizontal',
         safesearch: true,
